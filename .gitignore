@@ -1,0 +1,28 @@
+# Backend
+backend/target/
+backend/.mvn/
+backend/*.iml
+backend/.idea/
+
+# Frontend
+frontend-admin/node_modules/
+frontend-admin/dist/
+frontend-admin/.vite/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+mysql-data/
+
+# Env
+.env
+*.log
