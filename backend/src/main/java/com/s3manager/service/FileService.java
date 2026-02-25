@@ -45,20 +45,24 @@ public class FileService {
         String storageKey = generateStorageKey(originalName);
         String contentType = file.getContentType() != null ? file.getContentType() : "application/octet-stream";
 
-        try {
-            s3Service.uploadFile(storageKey, file.getInputStream(), file.getSize(), contentType);
-        } catch (IOException e) {
-            throw new BizException("文件上传失败: " + e.getMessage());
-        }
-
+        // 先写数据库（可回滚），再上传 S3（不可回滚）
         FileInfo fileInfo = new FileInfo();
         fileInfo.setOriginalName(originalName);
         fileInfo.setStorageKey(storageKey);
         fileInfo.setContentType(contentType);
         fileInfo.setFileSize(file.getSize());
         fileInfo.setBucketName(s3Config.getBucketName());
-        fileInfo.setStatus(1);
+        fileInfo.setStatus(0); // 上传中
         fileInfoMapper.insert(fileInfo);
+
+        try {
+            s3Service.uploadFile(storageKey, file.getInputStream(), file.getSize(), contentType);
+        } catch (IOException e) {
+            throw new BizException("文件上传失败: " + e.getMessage());
+        }
+
+        fileInfo.setStatus(1); // 已完成
+        fileInfoMapper.updateById(fileInfo);
 
         log.info("File uploaded: id={}, name={}, size={}", fileInfo.getId(), originalName, file.getSize());
         return FileInfoVO.from(fileInfo);

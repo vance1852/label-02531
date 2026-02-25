@@ -72,6 +72,7 @@ class FileServiceTest {
             assertEquals(1, result.getStatus());
             verify(s3Service).uploadFile(anyString(), any(), eq((long) "hello world".length()), eq("text/plain"));
             verify(fileInfoMapper).insert(any(FileInfo.class));
+            verify(fileInfoMapper).updateById(any(FileInfo.class));
         }
 
         @Test
@@ -103,15 +104,17 @@ class FileServiceTest {
         }
 
         @Test
-        @DisplayName("S3上传失败 - 应抛出BizException")
+        @DisplayName("S3上传失败 - 应抛出异常，数据库事务回滚")
         void upload_s3Failure_shouldThrow() {
             MockMultipartFile file = new MockMultipartFile(
                     "file", "fail.txt", "text/plain", "data".getBytes());
+            when(fileInfoMapper.insert(any(FileInfo.class))).thenReturn(1);
             doThrow(new RuntimeException("S3 connection refused"))
                     .when(s3Service).uploadFile(anyString(), any(), anyLong(), anyString());
 
-            // uploadFile 内部 catch IOException，但 RuntimeException 会直接抛出
             assertThrows(RuntimeException.class, () -> fileService.upload(file));
+            verify(fileInfoMapper).insert(any(FileInfo.class));
+            verify(fileInfoMapper, never()).updateById(any(FileInfo.class));
         }
     }
 
